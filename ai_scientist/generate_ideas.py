@@ -2,11 +2,16 @@ import json
 import os
 import os.path as osp
 import time
-from typing import List, Dict, Union
-from ai_scientist.llm import get_response_from_llm, extract_json_between_markers
+from typing import Dict, List, Union
 
-import requests
 import backoff
+import requests
+
+from ai_scientist.llm import (
+    allchoices,
+    extract_json_between_markers,
+    get_response_from_llm,
+)
 
 S2_API_KEY = os.getenv("S2_API_KEY")
 
@@ -463,12 +468,7 @@ if __name__ == "__main__":
         "--model",
         type=str,
         default="gpt-4o-2024-05-13",
-        choices=[
-            "claude-3-5-sonnet-20240620",
-            "gpt-4o-2024-05-13",
-            "deepseek-coder-v2-0724",
-            "llama3.1-405b",
-        ],
+        choices=allchoices,
         help="Model to use for AI Scientist.",
     )
     parser.add_argument(
@@ -521,6 +521,12 @@ if __name__ == "__main__":
             api_key=os.environ["OPENROUTER_API_KEY"],
             base_url="https://openrouter.ai/api/v1",
         )
+    elif args.model.startswith("ollama"):
+        import openai
+
+        print(f"Using Ollama with {args.model}.")
+        client_model = args.model.split("/")[-1]
+        client = openai.OpenAI(api_key="ollama", base_url="http://localhost:11434/v1")
     else:
         raise ValueError(f"Model {args.model} not supported.")
 

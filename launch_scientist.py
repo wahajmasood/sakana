@@ -1,21 +1,24 @@
-import openai
+import argparse
+import json
+import multiprocessing
+import os
 import os.path as osp
 import shutil
-import json
-import argparse
-import multiprocessing
-import torch
-import os
-import time
 import sys
-from aider.coders import Coder
-from aider.models import Model
-from aider.io import InputOutput
+import time
 from datetime import datetime
-from ai_scientist.generate_ideas import generate_ideas, check_idea_novelty
+
+import openai
+import torch
+from aider.coders import Coder
+from aider.io import InputOutput
+from aider.models import Model
+
+from ai_scientist.generate_ideas import check_idea_novelty, generate_ideas
+from ai_scientist.llm import allchoices
 from ai_scientist.perform_experiments import perform_experiments
-from ai_scientist.perform_writeup import perform_writeup, generate_latex
-from ai_scientist.perform_review import perform_review, load_paper, perform_improvement
+from ai_scientist.perform_review import load_paper, perform_improvement, perform_review
+from ai_scientist.perform_writeup import generate_latex, perform_writeup
 
 NUM_REFLECTIONS = 3
 
@@ -47,17 +50,7 @@ def parse_arguments():
         "--model",
         type=str,
         default="claude-3-5-sonnet-20240620",
-        choices=[
-            "claude-3-5-sonnet-20240620",
-            "gpt-4o-2024-05-13",
-            "deepseek-coder-v2-0724",
-            "llama3.1-405b",
-            # Anthropic Claude models via Amazon Bedrock
-            "bedrock/anthropic.claude-3-sonnet-20240229-v1:0",
-            "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
-            "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
-            "bedrock/anthropic.claude-3-opus-20240229-v1:0"
-        ],
+        choices=allchoices,
         help="Model to use for AI Scientist.",
     )
     parser.add_argument(
@@ -95,11 +88,21 @@ def parse_arguments():
 
 def get_available_gpus(gpu_ids=None):
     if gpu_ids is not None:
-        return [int(gpu_id) for gpu_id in gpu_ids.split(',')]
+        return [int(gpu_id) for gpu_id in gpu_ids.split(",")]
     return list(range(torch.cuda.device_count()))
 
 
-def worker(queue, base_dir, results_dir, model, client, client_model, writeup, improvement, gpu_id):
+def worker(
+    queue,
+    base_dir,
+    results_dir,
+    model,
+    client,
+    client_model,
+    writeup,
+    improvement,
+    gpu_id,
+):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
     print(f"Worker {gpu_id} started.")
     while True:
@@ -107,14 +110,30 @@ def worker(queue, base_dir, results_dir, model, client, client_model, writeup, i
         if idea is None:
             break
         success = do_idea(
-            base_dir, results_dir, idea, model, client, client_model, writeup, improvement, log_file=True
+            base_dir,
+            results_dir,
+            idea,
+            model,
+            client,
+            client_model,
+            writeup,
+            improvement,
+            log_file=True,
         )
         print(f"Completed idea: {idea['Name']}, Success: {success}")
     print(f"Worker {gpu_id} finished.")
 
 
 def do_idea(
-        base_dir, results_dir, idea, model, client, client_model, writeup, improvement, log_file=False
+    base_dir,
+    results_dir,
+    idea,
+    model,
+    client,
+    client_model,
+    writeup,
+    improvement,
+    log_file=False,
 ):
     ## CREATE PROJECT FOLDER
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -147,7 +166,9 @@ def do_idea(
         print(f"*Starting idea: {idea_name}*")
         ## PERFORM EXPERIMENTS
         fnames = [exp_file, vis_file, notes]
-        io = InputOutput(yes=True, chat_history_file=f"{folder_name}/{idea_name}_aider.txt")
+        io = InputOutput(
+            yes=True, chat_history_file=f"{folder_name}/{idea_name}_aider.txt"
+        )
         if model == "hybrid":
             main_model = Model("claude-3-5-sonnet-20240620")
         elif model == "deepseek-coder-v2-0724":
@@ -157,7 +178,12 @@ def do_idea(
         else:
             main_model = Model(model)
         coder = Coder.create(
-            main_model=main_model, fnames=fnames, io=io, stream=False, use_git=False, edit_format="diff"
+            main_model=main_model,
+            fnames=fnames,
+            io=io,
+            stream=False,
+            use_git=False,
+            edit_format="diff",
         )
 
         print_time()
@@ -188,7 +214,12 @@ def do_idea(
             else:
                 main_model = Model(model)
             coder = Coder.create(
-                main_model=main_model, fnames=fnames, io=io, stream=False, use_git=False, edit_format="diff"
+                main_model=main_model,
+                fnames=fnames,
+                io=io,
+                stream=False,
+                use_git=False,
+                edit_format="diff",
             )
             try:
                 perform_writeup(idea, folder_name, coder, client, client_model)
@@ -227,7 +258,9 @@ def do_idea(
             print(f"*Starting Improvement*")
             try:
                 perform_improvement(review, coder)
-                generate_latex(coder, folder_name, f"{folder_name}/{idea['Name']}_improved.pdf")
+                generate_latex(
+                    coder, folder_name, f"{folder_name}/{idea['Name']}_improved.pdf"
+                )
                 paper_text = load_paper(f"{folder_name}/{idea['Name']}_improved.pdf")
                 review = perform_review(
                     paper_text,
@@ -296,8 +329,7 @@ if __name__ == "__main__":
         print(f"Using OpenAI API with {args.model}.")
         client_model = "deepseek-coder-v2-0724"
         client = openai.OpenAI(
-            api_key=os.environ["DEEPSEEK_API_KEY"],
-            base_url="https://api.deepseek.com"
+            api_key=os.environ["DEEPSEEK_API_KEY"], base_url="https://api.deepseek.com"
         )
     elif args.model == "llama3.1-405b":
         import openai
@@ -306,8 +338,14 @@ if __name__ == "__main__":
         client_model = "meta-llama/llama-3.1-405b-instruct"
         client = openai.OpenAI(
             api_key=os.environ["OPENROUTER_API_KEY"],
-            base_url="https://openrouter.ai/api/v1"
+            base_url="https://openrouter.ai/api/v1",
         )
+    elif args.model.startswith("ollama"):
+        import openai
+
+        print(f"Using Ollama with {args.model}.")
+        client_model = args.model.split("/")[-1]
+        client = openai.OpenAI(api_key="ollama", base_url="http://localhost:11434/v1")
     else:
         raise ValueError(f"Model {args.model} not supported.")
 
@@ -355,7 +393,7 @@ if __name__ == "__main__":
                     args.writeup,
                     args.improvement,
                     gpu_id,
-                )
+                ),
             )
             p.start()
             time.sleep(150)

@@ -1,13 +1,18 @@
 import argparse
+import json
 import os
 import os.path as osp
+import re
 import shutil
 import subprocess
 from typing import Optional, Tuple
+
 from ai_scientist.generate_ideas import search_for_papers
-from ai_scientist.llm import get_response_from_llm, extract_json_between_markers
-import re
-import json
+from ai_scientist.llm import (
+    allchoices,
+    extract_json_between_markers,
+    get_response_from_llm,
+)
 
 
 # GENERATE LATEX
@@ -511,10 +516,11 @@ First, re-think the Title if necessary. Keep this concise and descriptive of the
 
 
 if __name__ == "__main__":
-    from aider.coders import Coder
-    from aider.models import Model
-    from aider.io import InputOutput
     import json
+
+    from aider.coders import Coder
+    from aider.io import InputOutput
+    from aider.models import Model
 
     parser = argparse.ArgumentParser(description="Perform writeup for a project")
     parser.add_argument("--folder", type=str)
@@ -523,17 +529,7 @@ if __name__ == "__main__":
         "--model",
         type=str,
         default="gpt-4o-2024-05-13",
-        choices=[
-            "claude-3-5-sonnet-20240620",
-            "gpt-4o-2024-05-13",
-            "deepseek-coder-v2-0724",
-            "llama3.1-405b",
-            # Anthropic Claude models via Amazon Bedrock
-            "bedrock/anthropic.claude-3-sonnet-20240229-v1:0",
-            "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
-            "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
-            "bedrock/anthropic.claude-3-opus-20240229-v1:0"
-        ],
+        choices=allchoices,
         help="Model to use for AI Scientist.",
     )
     args = parser.parse_args()
@@ -574,6 +570,12 @@ if __name__ == "__main__":
             api_key=os.environ["OPENROUTER_API_KEY"],
             base_url="https://openrouter.ai/api/v1",
         )
+    elif args.model.startswith("ollama"):
+        import openai
+
+        print(f"Using Ollama with {args.model}.")
+        client_model = args.model.split("/")[-1]
+        client = openai.OpenAI(api_key="ollama", base_url="http://localhost:11434/v1")
     else:
         raise ValueError(f"Model {args.model} not recognized.")
     print("Make sure you cleaned the Aider logs if re-generating the writeup!")
