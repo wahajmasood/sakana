@@ -15,7 +15,7 @@ from ai_scientist.llm import (
     llm_json_auto_correct,
 )
 
-S2_API_KEY = os.getenv("S2_API_KEY")
+S2_API_KEY = os.getenv("CSxBtednkB1KNFXq8CGlq7SzlSkpDfkl6otf5OsE")
 
 idea_first_prompt = """{task_description}
 <experiment.py>
@@ -44,7 +44,7 @@ NEW IDEA JSON:
 
 In <THOUGHT>, first briefly discuss your intuitions and motivations for the idea. Detail your high-level plan, necessary design choices and ideal outcomes of the experiments. Justify how the idea is different from the existing ones.
 
-In <JSON>, provide the new idea in JSON format with the following fields:
+Add '```json' before the <JSON> and '```' after the <JSON> as above. In <JSON>, provide the new idea in JSON format with the following keys and values:
 - "Name": A shortened descriptor of the idea. Lowercase, no spaces, underscores allowed.
 - "Title": A title for the idea, will be used for the report writing.
 - "Experiment": An outline of the implementation. E.g. which functions need to be added or modified, how results will be obtained, ...
@@ -65,7 +65,7 @@ Do not make things overly complicated.
 In the next attempt, try and refine and improve your idea.
 Stick to the spirit of the original idea unless there are glaring issues.
 
-Respond in the same format as before:
+Respond in the exactly the same format as before:
 THOUGHT:
 <THOUGHT>
 
@@ -75,7 +75,54 @@ NEW IDEA JSON:
 ```
 
 If there is nothing to improve, simply repeat the previous JSON EXACTLY after the thought and include "I am done" at the end of the thoughts but before the JSON.
-ONLY INCLUDE "I am done" IF YOU ARE MAKING NO MORE CHANGES."""
+ONLY INCLUDE "I am done" IF YOU ARE MAKING NO MORE CHANGES.
+"""
+
+
+# Format the content in JSON
+def format_idea_json(text):
+    json_start_marker = "```json"
+    json_end_marker = "```"
+    start_index = text.find(json_start_marker)
+    if start_index != -1:
+        start_index += len(json_start_marker)  # Move past the marker
+        end_index = text.find(json_end_marker, start_index)
+    json_string = text[start_index:end_index].strip()
+    res = strict_json(
+        system_prompt="You are a JSON formatter",
+        user_prompt=json_string,
+        output_format={
+            "Name": "A shortened descriptor of the idea",
+            "Title": "A title for the idea, will be used for the report writing",
+            "Experiment": "An outline of the implementation, type: list",
+            "Interestingness": "A rating from 1 to 10 (lowest to highest), type: int",
+            "Feasibility": "A rating from 1 to 10 (lowest to highest), type: int",
+            "Novelty": "A rating from 1 to 10 (lowest to highest), type: int",
+        },
+        llm=llm_json_auto_correct,
+    )
+    text = "```json\n" + json.dumps(res) + "```\n"
+    return text
+
+
+def format_novelty_json(text):
+    json_start_marker = "```json"
+    json_end_marker = "```"
+    start_index = text.find(json_start_marker)
+    if start_index != -1:
+        start_index += len(json_start_marker)  # Move past the marker
+        end_index = text.find(json_end_marker, start_index)
+    json_string = text[start_index:end_index].strip()
+    res = strict_json(
+        system_prompt="You are a JSON formatter",
+        user_prompt=json_string,
+        output_format={
+            "Query": "An optional search query to search the literature (e.g. attention is all you need)",
+        },
+        llm=llm_json_auto_correct,
+    )
+    text = "```json\n" + json.dumps(res) + "```\n"
+    return text
 
 
 # GENERATE IDEAS
@@ -135,14 +182,13 @@ def generate_ideas(
                 system_message=idea_system_prompt,
                 msg_history=msg_history,
             )
-
-            ## Format the content in JSON if using weak LLM
+            ## Format the content in JSON
             text = format_idea_json(text)
 
             ## PARSE OUTPUT
             json_output = extract_json_between_markers(text)
             assert json_output is not None, "Failed to extract JSON from LLM output"
-            print(json_output)
+            # print(json_output)
 
             # Iteratively improve task.
             if num_reflections > 1:
@@ -164,7 +210,7 @@ def generate_ideas(
                     assert (
                         json_output is not None
                     ), "Failed to extract JSON from LLM output"
-                    print(json_output)
+                    # print(json_output)
 
                     if "I am done" in text:
                         print(f"Idea generation converged after {j + 2} iterations.")
@@ -245,7 +291,7 @@ Scores of 0 indicate the idea failed either during experimentation, writeup or r
                 ## PARSE OUTPUT
                 json_output = extract_json_between_markers(text)
                 assert json_output is not None, "Failed to extract JSON from LLM output"
-                print(json_output)
+                # print(json_output)
 
                 # Iteratively improve task.
                 if num_reflections > 1:
@@ -267,7 +313,7 @@ Scores of 0 indicate the idea failed either during experimentation, writeup or r
                         assert (
                             json_output is not None
                         ), "Failed to extract JSON from LLM output"
-                        print(json_output)
+                        # print(json_output)
 
                         if "I am done" in text:
                             print(
@@ -371,7 +417,8 @@ In <JSON>, respond in JSON format with ONLY the following field:
 - "Query": An optional search query to search the literature (e.g. attention is all you need). You must make a query if you have not decided this round.
 
 A query will work best if you are able to recall the exact name of the paper you are looking for, or the authors.
-This JSON will be automatically parsed, so ensure the format is precise.'''
+This JSON will be automatically parsed, so ensure the format is precise.
+'''
 
 
 def check_idea_novelty(
@@ -424,6 +471,9 @@ def check_idea_novelty(
                     print("Decision made: not novel after round", j)
                     break
 
+                ## Format the content in JSON
+                text = format_novelty_json(text)
+                print("text after formating\n", text)
                 ## PARSE OUTPUT
                 json_output = extract_json_between_markers(text)
                 assert json_output is not None, "Failed to extract JSON from LLM output"
@@ -461,52 +511,6 @@ def check_idea_novelty(
         json.dump(ideas, f, indent=4)
 
     return ideas
-
-
-# Format the content in JSON
-def format_idea_json(text):
-    json_start_marker = "```json"
-    json_end_marker = "```"
-    start_index = text.find(json_start_marker)
-    if start_index != -1:
-        start_index += len(json_start_marker)  # Move past the marker
-        end_index = text.find(json_end_marker, start_index)
-    json_string = text[start_index:end_index].strip()
-    res = strict_json(
-        system_prompt="You are a JSON formatter",
-        user_prompt=json_string,
-        output_format={
-            "Name": "A shortened descriptor of the idea",
-            "Title": "A title for the idea, will be used for the report writing",
-            "Experiment": "An outline of the implementation, type: list",
-            "Interestingness": "A rating from 1 to 10 (lowest to highest), type: int",
-            "Feasibility": "A rating from 1 to 10 (lowest to highest), type: int",
-            "Novelty": "A rating from 1 to 10 (lowest to highest), type: int",
-        },
-        llm=llm_json_auto_correct,
-    )
-    text = "```json\n" + json.dumps(res) + "```\n"
-    return text
-
-
-def format_novelty_json(text):
-    json_start_marker = "```json"
-    json_end_marker = "```"
-    start_index = text.find(json_start_marker)
-    if start_index != -1:
-        start_index += len(json_start_marker)  # Move past the marker
-        end_index = text.find(json_end_marker, start_index)
-    json_string = text[start_index:end_index].strip()
-    res = strict_json(
-        system_prompt="You are a JSON formatter",
-        user_prompt=json_string,
-        output_format={
-            "Query": "An optional search query to search the literature (e.g. attention is all you need)",
-        },
-        llm=llm_json_auto_correct,
-    )
-    text = "```json\n" + json.dumps(res) + "```\n"
-    return text
 
 
 if __name__ == "__main__":
@@ -548,14 +552,6 @@ if __name__ == "__main__":
         print(f"Using Anthropic API with model {args.model}.")
         client_model = "claude-3-5-sonnet-20240620"
         client = anthropic.Anthropic()
-    elif args.model.startswith("bedrock") and "claude" in args.model:
-        import anthropic
-
-        # Expects: bedrock/<MODEL_ID>
-        client_model = args.model.split("/")[-1]
-
-        print(f"Using Amazon Bedrock with model {client_model}.")
-        client = anthropic.AnthropicBedrock()
     elif args.model == "gpt-4o-2024-05-13" or args.model == "hybrid":
         import openai
 
@@ -584,7 +580,9 @@ if __name__ == "__main__":
 
         print(f"Using Ollama with {args.model}.")
         client_model = args.model.split("/")[-1]
+        # client_model = args.model
         client = openai.OpenAI(api_key="ollama", base_url="http://localhost:11434/v1")
+
     else:
         raise ValueError(f"Model {args.model} not supported.")
 
