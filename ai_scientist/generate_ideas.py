@@ -367,7 +367,7 @@ def search_for_papers(query, result_limit=10) -> Union[None, List[Dict]]:
         return None
 
     papers = results["data"]
-    time.sleep(2.0)
+    time.sleep(5.0)
     return papers
 
 
