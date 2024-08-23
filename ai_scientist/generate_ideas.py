@@ -15,7 +15,7 @@ from ai_scientist.llm import (
     llm_json_auto_correct,
 )
 
-S2_API_KEY = os.getenv("CSxBtednkB1KNFXq8CGlq7SzlSkpDfkl6otf5OsE")
+S2_API_KEY = os.getenv("S2_API_KEY")
 
 idea_first_prompt = """{task_description}
 <experiment.py>
@@ -368,6 +368,7 @@ def search_for_papers(query, result_limit=10) -> Union[None, List[Dict]]:
         return None
 
     papers = results["data"]
+    time.sleep(2.0)
     return papers
 
 
