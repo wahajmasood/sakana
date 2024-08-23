@@ -365,9 +365,8 @@ def search_for_papers(query, result_limit=10) -> Union[None, List[Dict]]:
     total = results["total"]
     if not total:
         return None
-
+    time.sleep(2)
     papers = results["data"]
-    time.sleep(5.0)
     return papers
 
 
@@ -481,6 +480,7 @@ def check_idea_novelty(
                 ## SEARCH FOR PAPERS
                 query = json_output["Query"]
                 papers = search_for_papers(query, result_limit=10)
+                time.sleep(2)
                 if papers is None:
                     papers_str = "No papers found."
 
