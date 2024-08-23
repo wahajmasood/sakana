@@ -50,7 +50,17 @@ def parse_arguments():
         "--model",
         type=str,
         default="claude-3-5-sonnet-20240620",
-        choices=allchoices,
+        choices=[
+            "claude-3-5-sonnet-20240620",
+            "gpt-4o-2024-05-13",
+            "deepseek-coder-v2-0724",
+            "llama3.1-405b",
+            # Anthropic Claude models via Amazon Bedrock
+            "bedrock/anthropic.claude-3-sonnet-20240229-v1:0",
+            "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+            "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
+            "bedrock/anthropic.claude-3-opus-20240229-v1:0",
+        ],
         help="Model to use for AI Scientist.",
     )
     parser.add_argument(
@@ -205,9 +215,7 @@ def do_idea(
         if writeup == "latex":
             writeup_file = osp.join(folder_name, "latex", "template.tex")
             fnames = [exp_file, writeup_file, notes]
-            if model == "hybrid":
-                main_model = Model("gpt-4o-2024-05-13")
-            elif model == "deepseek-coder-v2-0724":
+            if model == "deepseek-coder-v2-0724":
                 main_model = Model("deepseek/deepseek-coder")
             elif model == "llama3.1-405b":
                 main_model = Model("openrouter/meta-llama/llama-3.1-405b-instruct")
@@ -316,8 +324,20 @@ if __name__ == "__main__":
         client_model = args.model.split("/")[-1]
 
         print(f"Using Amazon Bedrock with model {client_model}.")
-        client = anthropic.AnthropicBedrock()
-    elif args.model == "gpt-4o-2024-05-13" or args.model == "hybrid":
+        client = anthropic.AnthropicBedrock(
+            aws_access_key=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            aws_region=os.getenv("AWS_REGION_NAME"),
+        )
+    elif args.model.startswith("vertex_ai") and "claude" in args.model:
+        import anthropic
+
+        # Expects: vertex_ai/<MODEL_ID>
+        client_model = args.model.split("/")[-1]
+
+        print(f"Using Vertex AI with model {client_model}.")
+        client = anthropic.AnthropicVertex()
+    elif args.model == "gpt-4o-2024-05-13":
         import openai
 
         print(f"Using OpenAI API with model {args.model}.")

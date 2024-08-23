@@ -529,7 +529,17 @@ if __name__ == "__main__":
         "--model",
         type=str,
         default="gpt-4o-2024-05-13",
-        choices=allchoices,
+        choices=[
+            "claude-3-5-sonnet-20240620",
+            "gpt-4o-2024-05-13",
+            "deepseek-coder-v2-0724",
+            "llama3.1-405b",
+            # Anthropic Claude models via Amazon Bedrock
+            "bedrock/anthropic.claude-3-sonnet-20240229-v1:0",
+            "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+            "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
+            "bedrock/anthropic.claude-3-opus-20240229-v1:0",
+        ],
         help="Model to use for AI Scientist.",
     )
     args = parser.parse_args()
@@ -547,7 +557,15 @@ if __name__ == "__main__":
 
         print(f"Using Amazon Bedrock with model {client_model}.")
         client = anthropic.AnthropicBedrock()
-    elif args.model == "gpt-4o-2024-05-13" or args.model == "hybrid":
+    elif args.model.startswith("vertex_ai") and "claude" in args.model:
+        import anthropic
+
+        # Expects: vertex_ai/<MODEL_ID>
+        client_model = args.model.split("/")[-1]
+
+        print(f"Using Vertex AI with model {client_model}.")
+        client = anthropic.AnthropicVertex()
+    elif args.model == "gpt-4o-2024-05-13":
         import openai
 
         print(f"Using OpenAI API with model {args.model}.")

@@ -28,7 +28,7 @@ We further provide all runs and data from our paper [here](https://drive.google.
 10. [Grokking Through Compression: Unveiling Sudden Generalization via Minimal Description Length](https://github.com/SakanaAI/AI-Scientist/tree/main/example_papers/mdl_grokking_correlation.pdf)
 11. [Accelerating Mathematical Insight: Boosting Grokking Through Strategic Data Augmentation](https://github.com/SakanaAI/AI-Scientist/tree/main/example_papers/data_augmentation_grokking.pdf)
 
-**Note**: Caution! This codebase will execute LLM-written code. There are various risks and challenges associated with this autonomy. This includes e.g. the use of potentially dangerous packages, web access, and potential spawning of processes. Use at your own discretion. Please make sure to containerize and restrict web access appropriately.
+**Note**: Caution! This codebase will execute LLM-written code. There are various risks and challenges associated with this autonomy. This includes e.g. the use of potentially dangerous packages, web access, and potential spawning of processes. Use at your own discretion. Please make sure to [containerize](#containerization) and restrict web access appropriately.
 
 <p align="center">
   <a href="https://github.com/SakanaAI/AI-Scientist/blob/main/example_papers/adaptive_dual_scale_denoising/adaptive_dual_scale_denoising.pdf"><img src="https://github.com/SakanaAI/AI-Scientist/blob/main/docs/anim-ai-scientist.gif" alt="Adaptive Dual Scale Denoising" width="80%" />
@@ -43,6 +43,7 @@ We further provide all runs and data from our paper [here](https://drive.google.
 5. [Template Resources](#template-resources)
 6. [Citing The AI Scientist](#citing-the-ai-scientist)
 7. [Frequently Asked Questions](#faq)
+8. [Containerization](#containerization)
 
 ## Requirements
 
@@ -60,7 +61,7 @@ pip install -r requirements.txt
 
 When installing `texlive-full`, you may need to [hold Enter](https://askubuntu.com/questions/956006/pregenerating-context-markiv-format-this-may-take-some-time-takes-forever).
 
-### API Keys
+### Supported Models and API Keys
 
 #### OpenAI API (GPT-4)
 
@@ -70,9 +71,35 @@ By default, this uses the `OPENAI_API_KEY` environment variable.
 
 By default, this uses the `ANTHROPIC_API_KEY` environment variable.
 
-For Claude models provided by [Amazon Bedrock](https://aws.amazon.com/bedrock/), please specify a set of valid [AWS Credentials](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-envvars.html) and the target [AWS Region](https://docs.aws.amazon.com/bedrock/latest/userguide/bedrock-regions.html):
+##### Claude models via Bedrock
 
-(*required*) `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, (*optional*) `AWS_SESSION_TOKEN`, `AWS_DEFAULT_REGION`
+For Claude models provided by [Amazon Bedrock](https://aws.amazon.com/bedrock/), please install these additional packages:
+
+```bash
+pip install anthropic[bedrock]
+```
+
+Next, specify a set of valid [AWS Credentials](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-envvars.html) and the target [AWS Region](https://docs.aws.amazon.com/bedrock/latest/userguide/bedrock-regions.html):
+
+Set these environment variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION_NAME`.
+
+##### Claude models via Vertex AI
+
+For Claude models provided by [Vertex AI Model Garden](https://cloud.google.com/model-garden?hl=en), please install these additional packages:
+
+```bash
+pip install google-cloud-aiplatform
+pip install anthropic[vertex]
+```
+
+Next, set up a valid authentication for a [Google Cloud project](https://cloud.google.com/vertex-ai/docs/authentication), for example by providing region and project ID like so:
+
+```bash
+export CLOUD_ML_REGION="REGION" # for Model Garden call
+export ANTHROPIC_VERTEX_PROJECT_ID="PROJECT_ID" # for Model Garden call
+export VERTEXAI_LOCATION="REGION" # for Aider/LiteLLM call, as per https://docs.litellm.ai/docs/providers/vertex#set-vertex-project--vertex-location
+export VERTEXAI_PROJECT="PROJECT_ID" # for Aider/LiteLLM call as per https://docs.litellm.ai/docs/providers/vertex#set-vertex-project--vertex-location
+```
 
 #### DeepSeek API (DeepSeek-Coder-V2)
 
@@ -243,3 +270,25 @@ Please refer to the instructions for different templates. In this current iterat
 
 ### How do I add support for a new foundation model?
 Please see this [PR](https://github.com/SakanaAI/AI-Scientist/pull/7) for an example of how to add a new model, e.g. this time for Claude via Bedrock.
+We do not advise any model that is significantly weaker than GPT-4 level for The AI Scientist.
+
+## Containerization
+
+We include a [community-contributed](https://github.com/SakanaAI/AI-Scientist/pull/21) Docker image that may assist with your containerization efforts in `experimental/Dockerfile`.
+
+You can use this image like this:
+
+```bash
+# Endpoint Script
+docker run -e OPENAI_API_KEY=$OPENAI_API_KEY -v `pwd`/templates:/app/AI-Scientist/templates <AI_SCIENTIST_IMAGE> \
+  --model gpt-4o-2024-05-13 \
+  --experiment 2d_diffusion \
+  --num-ideas 2
+```
+
+```bash
+# Interactive
+docker run -it -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  --entrypoint /bin/bash \
+  <AI_SCIENTIST_IMAGE>
+```
