@@ -6,11 +6,13 @@ from typing import Dict, List, Union
 
 import backoff
 import requests
+from strictjson import strict_json
 
 from ai_scientist.llm import (
     allchoices,
     extract_json_between_markers,
     get_response_from_llm,
+    llm_json_auto_correct,
 )
 
 S2_API_KEY = os.getenv("S2_API_KEY")
@@ -133,6 +135,10 @@ def generate_ideas(
                 system_message=idea_system_prompt,
                 msg_history=msg_history,
             )
+
+            ## Format the content in JSON if using weak LLM
+            text = format_idea_json(text)
+
             ## PARSE OUTPUT
             json_output = extract_json_between_markers(text)
             assert json_output is not None, "Failed to extract JSON from LLM output"
@@ -151,6 +157,8 @@ def generate_ideas(
                         system_message=idea_system_prompt,
                         msg_history=msg_history,
                     )
+                    ## Format the content in JSON if using weak LLM
+                    text = format_idea_json(text)
                     ## PARSE OUTPUT
                     json_output = extract_json_between_markers(text)
                     assert (
@@ -232,6 +240,8 @@ Scores of 0 indicate the idea failed either during experimentation, writeup or r
                     system_message=idea_system_prompt,
                     msg_history=msg_history,
                 )
+                ## Format the content in JSON if using weak LLM
+                text = format_idea_json(text)
                 ## PARSE OUTPUT
                 json_output = extract_json_between_markers(text)
                 assert json_output is not None, "Failed to extract JSON from LLM output"
@@ -250,6 +260,8 @@ Scores of 0 indicate the idea failed either during experimentation, writeup or r
                             system_message=idea_system_prompt,
                             msg_history=msg_history,
                         )
+                        ## Format the content in JSON if using weak LLM
+                        text = format_idea_json(text)
                         ## PARSE OUTPUT
                         json_output = extract_json_between_markers(text)
                         assert (
@@ -449,6 +461,52 @@ def check_idea_novelty(
         json.dump(ideas, f, indent=4)
 
     return ideas
+
+
+# Format the content in JSON
+def format_idea_json(text):
+    json_start_marker = "```json"
+    json_end_marker = "```"
+    start_index = text.find(json_start_marker)
+    if start_index != -1:
+        start_index += len(json_start_marker)  # Move past the marker
+        end_index = text.find(json_end_marker, start_index)
+    json_string = text[start_index:end_index].strip()
+    res = strict_json(
+        system_prompt="You are a JSON formatter",
+        user_prompt=json_string,
+        output_format={
+            "Name": "A shortened descriptor of the idea",
+            "Title": "A title for the idea, will be used for the report writing",
+            "Experiment": "An outline of the implementation, type: list",
+            "Interestingness": "A rating from 1 to 10 (lowest to highest), type: int",
+            "Feasibility": "A rating from 1 to 10 (lowest to highest), type: int",
+            "Novelty": "A rating from 1 to 10 (lowest to highest), type: int",
+        },
+        llm=llm_json_auto_correct,
+    )
+    text = "```json\n" + json.dumps(res) + "```\n"
+    return text
+
+
+def format_novelty_json(text):
+    json_start_marker = "```json"
+    json_end_marker = "```"
+    start_index = text.find(json_start_marker)
+    if start_index != -1:
+        start_index += len(json_start_marker)  # Move past the marker
+        end_index = text.find(json_end_marker, start_index)
+    json_string = text[start_index:end_index].strip()
+    res = strict_json(
+        system_prompt="You are a JSON formatter",
+        user_prompt=json_string,
+        output_format={
+            "Query": "An optional search query to search the literature (e.g. attention is all you need)",
+        },
+        llm=llm_json_auto_correct,
+    )
+    text = "```json\n" + json.dumps(res) + "```\n"
+    return text
 
 
 if __name__ == "__main__":
