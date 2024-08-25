@@ -113,7 +113,8 @@ def get_batch_responses_from_llm(
     # ollama models
     elif model in ollama_choices:
         content, new_msg_history = [], []
-        for _ in range(n_responses):
+        for i in range(n_responses):
+            print(f"Getting {i}/{n_responses} response from {model}")
             c, hist = get_response_from_llm(
                 msg,
                 client,
