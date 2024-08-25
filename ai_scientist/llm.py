@@ -112,26 +112,19 @@ def get_batch_responses_from_llm(
             new_msg_history.append(hist)
     # ollama models
     elif model in ollama_choices:
-        new_msg_history = msg_history + [{"role": "user", "content": msg}]
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_message},
-                *new_msg_history,
-            ],
-            temperature=temperature,
-            max_tokens=3000,
-            n=n_responses,
-            stop=None,
-            seed=0,
-        )
-        content = [r.message.content for r in response.choices]
-
-        # print("\nget_batch_responses_from_llm\n")
-
-        new_msg_history = [
-            new_msg_history + [{"role": "assistant", "content": c}] for c in content
-        ]
+        content, new_msg_history = [], []
+        for _ in range(n_responses):
+            c, hist = get_response_from_llm(
+                msg,
+                client,
+                model,
+                system_message,
+                print_debug=False,
+                msg_history=None,
+                temperature=temperature,
+            )
+            content.append(c)
+            new_msg_history.append(hist)
     else:
         # TODO: This is only supported for GPT-4 in our reviewer pipeline.
         raise ValueError(f"Model {model} not supported.")
@@ -252,14 +245,14 @@ def get_response_from_llm(
                 *new_msg_history,
             ],
             temperature=temperature,
-            max_tokens=3000,
+            max_tokens=6000,
             n=1,
             stop=None,
             seed=0,
         )
         content = response.choices[0].message.content
 
-        print("\nget_response_from_llm\n")
+        # print("\nget_response_from_llm\n")
         # print(content)
 
         new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
