@@ -1,14 +1,55 @@
-import os
-import numpy as np
 import json
-from pypdf import PdfReader
+import os
+
+import numpy as np
 import pymupdf
 import pymupdf4llm
+from pypdf import PdfReader
+from strictjson import strict_json
+
 from ai_scientist.llm import (
-    get_response_from_llm,
-    get_batch_responses_from_llm,
     extract_json_between_markers,
+    get_batch_responses_from_llm,
+    get_response_from_llm,
+    llm_json_auto_correct,
 )
+
+
+# Format the content in JSON
+def format_idea_json(text):
+    json_start_marker = "```json"
+    json_end_marker = "```"
+    start_index = text.find(json_start_marker)
+    if start_index != -1:
+        start_index += len(json_start_marker)  # Move past the marker
+        end_index = text.find(json_end_marker, start_index)
+    json_string = text[start_index:end_index].strip()
+    res = strict_json(
+        system_prompt="You are a JSON formatter",
+        user_prompt=json_string,
+        output_format={
+            "Summary": "A summary of the paper content and its contributions.",
+            "Strengths": "A list of strengths of the paper.",
+            "Weaknesses": "A list of weaknesses of the paper.",
+            "Originality": "A rating from 1 to 4 (low, medium, high, very high), type: int",
+            "Quality": "A rating from 1 to 4 (low, medium, high, very high), type: int",
+            "Clarity": "A rating from 1 to 4 (low, medium, high, very high), type: int",
+            "Significance": "A rating from 1 to 4 (low, medium, high, very high), type: int",
+            "Questions": "A set of clarifying questions to be answered by the paper authors.",
+            "Limitations": "A set of limitations and potential negative societal impacts of the work.",
+            "Ethical Concerns": "A boolean value indicating whether there are ethical concerns.",
+            "Soundness": "A rating from 1 to 4 (poor, fair, good, excellent), type: int",
+            "Presentation": "A rating from 1 to 4 (poor, fair, good, excellent), type: int",
+            "Contribution": "A rating from 1 to 4 (poor, fair, good, excellent), type: int",
+            "Overall": "A rating from 1 to 10 (very strong reject to award quality), type: int",
+            "Confidence": "A rating from 1 to 5 (low, medium, high, very high, absolute), type: int",
+            "Decision": "A decision that has to be one of the following: Accept, Reject.",
+        },
+        llm=llm_json_auto_correct,
+    )
+    text = "```json\n" + json.dumps(res) + "```\n"
+    return text
+
 
 reviewer_system_prompt_base = (
     "You are an AI researcher who is reviewing a paper that was submitted to a prestigious ML venue."
@@ -168,7 +209,8 @@ Here is the paper you are asked to review:
                 print(f"Ensemble review {idx} failed: {e}")
         parsed_reviews = [r for r in parsed_reviews if r is not None]
         review = get_meta_review(model, client, temperature, parsed_reviews)
-
+        ## Format the content in JSON
+        review = format_idea_json(review)
         # take first valid in case meta-reviewer fails
         if review is None:
             review = parsed_reviews[0]
