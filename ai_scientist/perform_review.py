@@ -16,7 +16,7 @@ from ai_scientist.llm import (
 
 
 # Format the content in JSON
-def format_idea_json(text):
+def format_llm_review_json(text):
     json_start_marker = "```json"
     json_end_marker = "```"
     start_index = text.find(json_start_marker)
@@ -210,7 +210,7 @@ Here is the paper you are asked to review:
         parsed_reviews = [r for r in parsed_reviews if r is not None]
         review = get_meta_review(model, client, temperature, parsed_reviews)
         ## Format the content in JSON
-        review = format_idea_json(review)
+        review = format_llm_review_json(review)
         # take first valid in case meta-reviewer fails
         if review is None:
             review = parsed_reviews[0]
