@@ -17,16 +17,9 @@ from ai_scientist.llm import (
 
 # Format the content in JSON
 def format_llm_review_json(text):
-    json_start_marker = "```json"
-    json_end_marker = "```"
-    start_index = text.find(json_start_marker)
-    if start_index != -1:
-        start_index += len(json_start_marker)  # Move past the marker
-        end_index = text.find(json_end_marker, start_index)
-    json_string = text[start_index:end_index].strip()
     res = strict_json(
         system_prompt="You are a JSON formatter",
-        user_prompt=json_string,
+        user_prompt=text,
         output_format={
             "Summary": "A summary of the paper content and its contributions.",
             "Strengths": "A list of strengths of the paper, type: list",
@@ -47,7 +40,7 @@ def format_llm_review_json(text):
         },
         llm=llm_json_auto_correct,
     )
-    text = "```json\n" + json.dumps(res) + "```\n"
+    # text = "```json\n" + json.dumps(res) + "```\n"
     return text
 
 
