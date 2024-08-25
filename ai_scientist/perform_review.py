@@ -40,7 +40,7 @@ def format_llm_review_json(text):
         },
         llm=llm_json_auto_correct,
     )
-    # text = "```json\n" + json.dumps(res) + "```\n"
+    text = json.loads(res)
     return text
 
 
@@ -196,9 +196,8 @@ Here is the paper you are asked to review:
         )
         parsed_reviews = []
         for idx, rev in enumerate(llm_review):
-            rev = format_llm_review_json(rev)
             try:
-                parsed_reviews.append(rev)
+                parsed_reviews.append(format_llm_review_json(rev))
             except Exception as e:
                 print(f"Ensemble review {idx} failed: {e}")
         parsed_reviews = [r for r in parsed_reviews if r is not None]
