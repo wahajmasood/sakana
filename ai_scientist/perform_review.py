@@ -203,8 +203,9 @@ Here is the paper you are asked to review:
         )
         parsed_reviews = []
         for idx, rev in enumerate(llm_review):
+            rev = format_llm_review_json(rev)
             try:
-                parsed_reviews.append(extract_json_between_markers(rev))
+                parsed_reviews.append(rev)
             except Exception as e:
                 print(f"Ensemble review {idx} failed: {e}")
         parsed_reviews = [r for r in parsed_reviews if r is not None]
@@ -214,7 +215,7 @@ Here is the paper you are asked to review:
         # take first valid in case meta-reviewer fails
         if review is None:
             review = parsed_reviews[0]
-
+        print(parsed_reviews, "\n\n\n", review)
         # Replace numerical scores with the average of the ensemble.
         for score, limits in [
             ("Originality", (1, 4)),

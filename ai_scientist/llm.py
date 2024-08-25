@@ -112,37 +112,20 @@ def get_batch_responses_from_llm(
             new_msg_history.append(hist)
     # ollama models
     elif model in ollama_choices:
-        new_msg_history = msg_history + [{"role": "user", "content": msg}]
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_message},
-                *new_msg_history,
-            ],
-            temperature=temperature,
-            max_tokens=3000,
-            n=n_responses,
-            stop=None,
-            seed=0,
-        )
-        content = [r.message.content for r in response.choices]
-        new_msg_history = [
-            new_msg_history + [{"role": "assistant", "content": c}] for c in content
-        ]
-        # content, new_msg_history = [], []
-        # for i in range(n_responses):
-        #     print(f"Getting {i+1}/{n_responses} response from {model}")
-        #     c, hist = get_response_from_llm(
-        #         msg,
-        #         client,
-        #         model,
-        #         system_message,
-        #         print_debug=False,
-        #         msg_history=None,
-        #         temperature=temperature,
-        #     )
-        #     content.append(c)
-        #     new_msg_history.append(hist)
+        content, new_msg_history = [], []
+        for i in range(n_responses):
+            print(f"Getting {i+1}/{n_responses} response from {model}")
+            c, hist = get_response_from_llm(
+                msg,
+                client,
+                model,
+                system_message,
+                print_debug=False,
+                msg_history=None,
+                temperature=temperature,
+            )
+            content.append(c)
+            new_msg_history.append(hist)
     else:
         # TODO: This is only supported for GPT-4 in our reviewer pipeline.
         raise ValueError(f"Model {model} not supported.")
