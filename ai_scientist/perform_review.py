@@ -20,6 +20,7 @@ def format_llm_review_json(text):
     res = strict_json(
         system_prompt="You are a JSON formatter",
         user_prompt=text,
+        return_as_json=True,
         output_format={
             "Summary": "A summary of the paper content and its contributions.",
             "Strengths": "A list of strengths of the paper, type: list",
