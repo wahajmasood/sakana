@@ -253,7 +253,7 @@ REVIEW JSON:
             msg_history=msg_history,
             temperature=temperature,
         )
-        review = extract_json_between_markers(llm_review)
+        review = format_llm_review_json(review)
 
     if num_reflections > 1:
         for j in range(num_reflections - 1):
@@ -266,7 +266,7 @@ REVIEW JSON:
                 msg_history=msg_history,
                 temperature=temperature,
             )
-            review = extract_json_between_markers(text)
+            review = format_llm_review_json(review)
             assert review is not None, "Failed to extract JSON from LLM output"
 
             if "I am done" in text:
