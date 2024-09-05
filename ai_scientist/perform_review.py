@@ -208,7 +208,7 @@ Here is the paper you are asked to review:
         # take first valid in case meta-reviewer fails
         if review is None:
             review = parsed_reviews[0]
-        print(parsed_reviews, "\n\n\n", review)
+        # print(parsed_reviews, "\n\n\n", review) # debug
         # Replace numerical scores with the average of the ensemble.
         for score, limits in [
             ("Originality", (1, 4)),
