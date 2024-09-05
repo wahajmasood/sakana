@@ -415,7 +415,7 @@ Review {i + 1}/{len(reviews)}:
         msg_history=None,
         temperature=temperature,
     )
-    meta_review = extract_json_between_markers(llm_review)
+    meta_review = format_llm_review_json(llm_review)
     return meta_review
 
 
