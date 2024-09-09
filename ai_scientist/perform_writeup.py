@@ -7,12 +7,30 @@ import shutil
 import subprocess
 from typing import Optional, Tuple
 
+from strictjson import strict_json
+
 from ai_scientist.generate_ideas import search_for_papers
 from ai_scientist.llm import (
     allchoices,
     extract_json_between_markers,
     get_response_from_llm,
+    llm_json_auto_correct,
 )
+
+
+def format_citation_promopt_json(text):
+    res = strict_json(
+        system_prompt="You are a JSON formatter",
+        user_prompt=text,
+        return_as_json=True,
+        output_format={
+            "Description": "A precise description of the required edit, along with the proposed text and location where it should be made",
+            "Query": "The search query to find the paper (e.g. attention is all you need)",
+        },
+        llm=llm_json_auto_correct,
+    )
+    text = json.loads(res)
+    return text
 
 
 # GENERATE LATEX
@@ -316,7 +334,7 @@ def get_citation_aider_prompt(
             return None, True
 
         ## PARSE OUTPUT
-        json_output = extract_json_between_markers(text)
+        json_output = format_citation_promopt_json(text)
         assert json_output is not None, "Failed to extract JSON from LLM output"
         query = json_output["Query"]
         papers = search_for_papers(query)
@@ -358,7 +376,7 @@ def get_citation_aider_prompt(
             print("Do not add any.")
             return None, False
         ## PARSE OUTPUT
-        json_output = extract_json_between_markers(text)
+        json_output = format_citation_promopt_json(text)
         assert json_output is not None, "Failed to extract JSON from LLM output"
         desc = json_output["Description"]
         selected_papers = json_output["Selected"]
@@ -530,17 +548,7 @@ if __name__ == "__main__":
         "--model",
         type=str,
         default="gpt-4o-2024-05-13",
-        choices=[
-            "claude-3-5-sonnet-20240620",
-            "gpt-4o-2024-05-13",
-            "deepseek-coder-v2-0724",
-            "llama3.1-405b",
-            # Anthropic Claude models via Amazon Bedrock
-            "bedrock/anthropic.claude-3-sonnet-20240229-v1:0",
-            "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
-            "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
-            "bedrock/anthropic.claude-3-opus-20240229-v1:0",
-        ],
+        choices=allchoices,
         help="Model to use for AI Scientist.",
     )
     args = parser.parse_args()
