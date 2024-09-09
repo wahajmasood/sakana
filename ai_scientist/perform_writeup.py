@@ -349,7 +349,7 @@ def get_citation_aider_prompt(
             return None, True
 
         ## PARSE OUTPUT
-        json_output = format_citation_promopt_json(text)
+        json_output = format_citation_first_json(text)
         assert json_output is not None, "Failed to extract JSON from LLM output"
         query = json_output["Query"]
         papers = search_for_papers(query)
@@ -391,7 +391,7 @@ def get_citation_aider_prompt(
             print("Do not add any.")
             return None, False
         ## PARSE OUTPUT
-        json_output = format_citation_promopt_json(text)
+        json_output = format_citation_second_json(text)
         assert json_output is not None, "Failed to extract JSON from LLM output"
         desc = json_output["Description"]
         selected_papers = json_output["Selected"]
