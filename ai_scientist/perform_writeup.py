@@ -18,7 +18,7 @@ from ai_scientist.llm import (
 )
 
 
-def format_citation_promopt_json(text):
+def format_citation_first_json(text):
     res = strict_json(
         system_prompt="You are a JSON formatter",
         user_prompt=text,
@@ -26,6 +26,21 @@ def format_citation_promopt_json(text):
         output_format={
             "Description": "A precise description of the required edit, along with the proposed text and location where it should be made",
             "Query": "The search query to find the paper (e.g. attention is all you need)",
+        },
+        llm=llm_json_auto_correct,
+    )
+    text = json.loads(res)
+    return text
+
+
+def format_citation_second_json(text):
+    res = strict_json(
+        system_prompt="You are a JSON formatter",
+        user_prompt=text,
+        return_as_json=True,
+        output_format={
+            "Selected": "A list of the indices of the selected papers to be cited, e.g. '[0, 1]'. Can be '[]' if no papers are selected. This must be a string",
+            "Description": "Update the previous description of the required edit if needed. Ensure that any cites precisely match the name in the bibtex",
         },
         llm=llm_json_auto_correct,
     )
