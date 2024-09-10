@@ -234,15 +234,29 @@ def do_idea(
         if writeup == "latex":
             try:
                 paper_text = load_paper(f"{folder_name}/{idea['Name']}.pdf")
-                review = perform_review(
-                    paper_text,
-                    model="gpt-4o-2024-05-13",
-                    client=openai.OpenAI(),
-                    num_reflections=5,
-                    num_fs_examples=1,
-                    num_reviews_ensemble=5,
-                    temperature=0.1,
-                )
+                if model == "gpt-4o-2024-05-13":
+                    review = perform_review(
+                        paper_text,
+                        model=main_model,
+                        client=openai.OpenAI(),
+                        num_reflections=5,
+                        num_fs_examples=1,
+                        num_reviews_ensemble=5,
+                        temperature=0.1,
+                    )
+                else:
+                    main_model = Model(model)
+                    review = perform_review(
+                        paper_text,
+                        model=main_model,
+                        client=openai.OpenAI(
+                            api_key="ollama", base_url="http://localhost:11434/v1"
+                        ),
+                        num_reflections=5,
+                        num_fs_examples=1,
+                        num_reviews_ensemble=5,
+                        temperature=0.1,
+                    )
                 # Store the review in separate review.txt file
                 with open(osp.join(folder_name, "review.txt"), "w") as f:
                     f.write(json.dumps(review, indent=4))
@@ -260,15 +274,30 @@ def do_idea(
                     coder, folder_name, f"{folder_name}/{idea['Name']}_improved.pdf"
                 )
                 paper_text = load_paper(f"{folder_name}/{idea['Name']}_improved.pdf")
-                review = perform_review(
-                    paper_text,
-                    model="gpt-4o-2024-05-13",
-                    client=openai.OpenAI(),
-                    num_reflections=5,
-                    num_fs_examples=1,
-                    num_reviews_ensemble=5,
-                    temperature=0.1,
-                )
+
+                if model == "gpt-4o-2024-05-13":
+                    review = perform_review(
+                        paper_text,
+                        model=main_model,
+                        client=openai.OpenAI(),
+                        num_reflections=5,
+                        num_fs_examples=1,
+                        num_reviews_ensemble=5,
+                        temperature=0.1,
+                    )
+                else:
+                    main_model = Model(model)
+                    review = perform_review(
+                        paper_text,
+                        model=main_model,
+                        client=openai.OpenAI(
+                            api_key="ollama", base_url="http://localhost:11434/v1"
+                        ),
+                        num_reflections=5,
+                        num_fs_examples=1,
+                        num_reviews_ensemble=5,
+                        temperature=0.1,
+                    )
                 # Store the review in separate review.txt file
                 with open(osp.join(folder_name, "review_improved.txt"), "w") as f:
                     f.write(json.dumps(review))
