@@ -245,10 +245,10 @@ def do_idea(
                         temperature=0.1,
                     )
                 else:
-                    main_model = Model(model)
+                    # Use Ollama API for review generation
                     review = perform_review(
                         paper_text,
-                        model=main_model,
+                        model=model,
                         client=openai.OpenAI(
                             api_key="ollama", base_url="http://localhost:11434/v1"
                         ),
