@@ -365,6 +365,11 @@ if __name__ == "__main__":
             api_key=os.environ["OPENROUTER_API_KEY"],
             base_url="https://openrouter.ai/api/v1",
         )
+    elif "gemini" in args.model:
+        import google.generativeai
+
+        print(f"Using Gemini API with model {args.model}.")
+        client = google.generativeai.GenerativeModel(args.model)
     else:
         raise ValueError(f"Model {args.model} not supported.")
 
