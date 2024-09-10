@@ -235,6 +235,7 @@ def do_idea(
             try:
                 paper_text = load_paper(f"{folder_name}/{idea['Name']}.pdf")
                 if model == "gpt-4o-2024-05-13":
+                    main_model = Model(model)
                     review = perform_review(
                         paper_text,
                         model=main_model,
@@ -244,7 +245,7 @@ def do_idea(
                         num_reviews_ensemble=5,
                         temperature=0.1,
                     )
-                else:
+                elif model.startswith("ollama"):
                     # Use Ollama API for review generation
                     review = perform_review(
                         paper_text,
@@ -276,6 +277,7 @@ def do_idea(
                 paper_text = load_paper(f"{folder_name}/{idea['Name']}_improved.pdf")
 
                 if model == "gpt-4o-2024-05-13":
+                    main_model = Model(model)
                     review = perform_review(
                         paper_text,
                         model=main_model,
@@ -285,11 +287,11 @@ def do_idea(
                         num_reviews_ensemble=5,
                         temperature=0.1,
                     )
-                else:
-                    main_model = Model(model)
+                elif model.startswith("ollama"):
+                    # Use Ollama API for review generation
                     review = perform_review(
                         paper_text,
-                        model=main_model,
+                        model=model,
                         client=openai.OpenAI(
                             api_key="ollama", base_url="http://localhost:11434/v1"
                         ),
