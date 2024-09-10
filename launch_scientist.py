@@ -249,7 +249,7 @@ def do_idea(
                     # Use Ollama API for review generation
                     review = perform_review(
                         paper_text,
-                        model=model,
+                        model=model.split("/")[-1],
                         client=openai.OpenAI(
                             api_key="ollama", base_url="http://localhost:11434/v1"
                         ),
@@ -291,7 +291,7 @@ def do_idea(
                     # Use Ollama API for review generation
                     review = perform_review(
                         paper_text,
-                        model=model,
+                        model=model.split("/")[-1],
                         client=openai.OpenAI(
                             api_key="ollama", base_url="http://localhost:11434/v1"
                         ),
