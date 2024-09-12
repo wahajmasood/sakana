@@ -1,13 +1,51 @@
 import argparse
+import json
 import os
 import os.path as osp
+import re
 import shutil
 import subprocess
 from typing import Optional, Tuple
+
+from strictjson import strict_json
+
 from ai_scientist.generate_ideas import search_for_papers
-from ai_scientist.llm import get_response_from_llm, extract_json_between_markers
-import re
-import json
+from ai_scientist.llm import (
+    allchoices,
+    extract_json_between_markers,
+    get_response_from_llm,
+    llm_json_auto_correct,
+)
+
+
+def format_citation_first_json(text):
+    res = strict_json(
+        system_prompt="You are a JSON formatter",
+        user_prompt=text,
+        return_as_json=True,
+        output_format={
+            "Description": "A precise description of the required edit, along with the proposed text and location where it should be made",
+            "Query": "The search query to find the paper (e.g. attention is all you need)",
+        },
+        llm=llm_json_auto_correct,
+    )
+    text = json.loads(res)
+    return text
+
+
+def format_citation_second_json(text):
+    res = strict_json(
+        system_prompt="You are a JSON formatter",
+        user_prompt=text,
+        return_as_json=True,
+        output_format={
+            "Selected": "A list of the indices of the selected papers to be cited, e.g. '[0, 1]'. Can be '[]' if no papers are selected. This must be a string",
+            "Description": "Update the previous description of the required edit if needed. Ensure that any cites precisely match the name in the bibtex",
+        },
+        llm=llm_json_auto_correct,
+    )
+    text = json.loads(res)
+    return text
 
 
 # GENERATE LATEX
@@ -311,7 +349,7 @@ def get_citation_aider_prompt(
             return None, True
 
         ## PARSE OUTPUT
-        json_output = extract_json_between_markers(text)
+        json_output = format_citation_first_json(text)
         assert json_output is not None, "Failed to extract JSON from LLM output"
         query = json_output["Query"]
         papers = search_for_papers(query)
@@ -353,7 +391,7 @@ def get_citation_aider_prompt(
             print("Do not add any.")
             return None, False
         ## PARSE OUTPUT
-        json_output = extract_json_between_markers(text)
+        json_output = format_citation_second_json(text)
         assert json_output is not None, "Failed to extract JSON from LLM output"
         desc = json_output["Description"]
         selected_papers = json_output["Selected"]
@@ -512,10 +550,11 @@ First, re-think the Title if necessary. Keep this concise and descriptive of the
 
 
 if __name__ == "__main__":
-    from aider.coders import Coder
-    from aider.models import Model
-    from aider.io import InputOutput
     import json
+
+    from aider.coders import Coder
+    from aider.io import InputOutput
+    from aider.models import Model
 
     parser = argparse.ArgumentParser(description="Perform writeup for a project")
     parser.add_argument("--folder", type=str)
@@ -524,22 +563,7 @@ if __name__ == "__main__":
         "--model",
         type=str,
         default="gpt-4o-2024-05-13",
-        choices=[
-            "claude-3-5-sonnet-20240620",
-            "gpt-4o-2024-05-13",
-            "deepseek-coder-v2-0724",
-            "llama3.1-405b",
-            # Anthropic Claude models via Amazon Bedrock
-            "bedrock/anthropic.claude-3-sonnet-20240229-v1:0",
-            "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
-            "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
-            "bedrock/anthropic.claude-3-opus-20240229-v1:0"
-            # Anthropic Claude models Vertex AI
-            "vertex_ai/claude-3-opus@20240229",
-            "vertex_ai/claude-3-5-sonnet@20240620",
-            "vertex_ai/claude-3-sonnet@20240229",
-            "vertex_ai/claude-3-haiku@20240307"
-        ],
+        choices=allchoices,
         help="Model to use for AI Scientist.",
     )
     args = parser.parse_args()
@@ -588,6 +612,12 @@ if __name__ == "__main__":
             api_key=os.environ["OPENROUTER_API_KEY"],
             base_url="https://openrouter.ai/api/v1",
         )
+    elif args.model.startswith("ollama"):
+        import openai
+
+        print(f"Using Ollama with {args.model}.")
+        client_model = args.model.split("/")[-1]
+        client = openai.OpenAI(api_key="ollama", base_url="http://localhost:11434/v1")
     else:
         raise ValueError(f"Model {args.model} not recognized.")
     print("Make sure you cleaned the Aider logs if re-generating the writeup!")
